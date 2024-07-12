@@ -49,11 +49,13 @@ def filter_coordinates_by_angle(coordinates, X, Y, angle_min, angle_max):
     numpy.ndarray: Filtered array of coordinates within the specified angular range.
     """
     # Convert angles to radians
+    print("angle_min", angle_min, "angle_max", angle_max)
     angle_min_rad = np.deg2rad(angle_min)
     angle_max_rad = np.deg2rad(angle_max)
+    print("angle_min_rad", angle_min_rad, "angle_max_rad", angle_max_rad)
     
     # Calculate the angles of each point relative to the center
-    angles = np.arctan2(coordinates[:, 1] - Y, coordinates[:, 0] - X)
+    angles = np.arctan2(Y - coordinates[:, 1], coordinates[:, 0] - X)
     
     # Normalize angles to range [0, 2*pi)
     angles = np.mod(angles, 2 * np.pi)

@@ -79,17 +79,15 @@ def get_distance_value(distance):
     DistanceValues = [3, 5, 9, 19, 49, 199, 499, 999, 1999, 4096]
     return DistanceValues[distance]
 
-def get_direction_values(direction_index, offset):
-    if direction_index <3:
-        DirectionValue = (270-(offset - (direction_index * 45))+360) % 360
-    else:
-        DirectionValue = ((270 - (offset - (direction_index * 45))+360) %360)
-    print(DirectionValue)
-    if DirectionValue < 0:
-        DirectionValue += 360
-    # DirectionValue = abs(DirectionValue)
-    DirectionMin = DirectionValue - 22.5
-    DirectionMax = DirectionValue + 22.5
+def get_direction_values(direction_index, looking_direction):
+    print("direction_index", direction_index)
+    directionValues = [0, -45, -90, -135, 180, 135, 90, 45] # ["straight ahead", "ahead to the right", "right", "back to the right", "backwards", "back to the left", "to the left", "ahead to the left" ]
+    directionValue = directionValues[direction_index]
+    directionValue = ( 450 + ( looking_direction + directionValue )) % 360
+    
+    print(directionValue)
+    DirectionMin = directionValue - 22.5
+    DirectionMax = directionValue + 22.5
     if DirectionMin < 0:
         DirectionMin += 360
     if DirectionMax > 360:
@@ -102,7 +100,7 @@ def plot_coordinates(coordinates_within_angle):
     # Plotting
     plt.figure(figsize=(8, 8))
     plt.imshow(img) 
-    plt.scatter(coordinates_within_angle[:, 0], coordinates_within_angle[:, 1], color='#FF999C', alpha=0.1, label='Area to be checked')
+    plt.scatter(coordinates_within_angle[:, 0], coordinates_within_angle[:, 1], color='#FF999C', label='Area to be checked')
     plt.gca().set_aspect('equal', adjustable='box')
     plt.title(f'Points within Circle and Angle Range')
     plt.xlabel('X')
@@ -124,7 +122,8 @@ class MainWindow(QMainWindow):
         self.widget = QWidget()
 
         self.DirectionBox = QComboBox()  # ["straight ahead", "ahead to the left", "to the left", "back to the left", "backwards", "back to the right", "right", "ahead to the right"]
-        self.DirectionBox.addItems(["straight ahead", "ahead to the right", "right", "back to the right", "backwards", "ahead to the left", "to the left", "back to the left" ]) # ["straight ahead", "ahead to the right", "right", "back to the right", "backwards", "back to the left", "to the left", "ahead to the left"] 
+        
+        self.DirectionBox.addItems(["straight ahead", "ahead to the right", "right", "back to the right", "backwards", "back to the left", "to the left", "ahead to the left" ]) # ["straight ahead", "ahead to the right", "right", "back to the right", "backwards", "back to the left", "to the left", "ahead to the left"] 
 
         self.DistanceBox = QComboBox()
         self.DistanceBox.addItems(["a stone's throw away", "very close", "pretty close by", "fairly close by", "some distance away", "quite some distance away", "rather a long distance away", "pretty far away", "far away", "very far away"])
@@ -146,6 +145,8 @@ class MainWindow(QMainWindow):
         self.PlayerXCoord.setPlaceholderText("X Coordinate")
         self.PlayerYCoord.setPlaceholderText("Y Coordinate")
 
+        self.ResetButton = QPushButton("Reset", clicked = self.reset)
+
         self.SumbitButton = QPushButton("Submit", clicked = self.calculate)
 
         self.layout.addWidget(self.DirectionBox)
@@ -154,9 +155,11 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(self.PlayerXCoord)
         self.layout.addWidget(self.PlayerYCoord)
         self.layout.addWidget(self.SumbitButton)
+        self.layout.addWidget(self.ResetButton)
 
         self.widget.setLayout(self.layout)
         self.setCentralWidget(self.widget)
+
 
     def calculate(self):
         
@@ -182,11 +185,19 @@ class MainWindow(QMainWindow):
         if self.Coordinates is not None:
             self.PrevCoordinates = self.Coordinates
             self.Coordinates = reduce_coordinates_by_angle(self.PrevCoordinates, PlayerXCoord, PlayerYCoord, DistanceValueMax, DirectionMin, DirectionMax)
+            print(len(self.Coordinates))
         else:
             coordinates_within_angle = calculate_coordinates(PlayerXCoord, PlayerYCoord, DistanceValueMax, DirectionMin, DirectionMax)
             self.Coordinates = filter_coordinates_by_min_distance(coordinates_within_angle, PlayerXCoord, PlayerYCoord, DistanceValueMin)
         self.Coordinates = filter_coordinates_outside_range(self.Coordinates)
         plot_coordinates(self.Coordinates)
+    
+    def reset(self):
+        self.Coordinates = None
+        self.PrevCoordinates = None
+        self.FacingDirection.setText("")
+        self.PlayerXCoord.setText("")
+        self.PlayerYCoord.setText("")
         
 
   
