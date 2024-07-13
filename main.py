@@ -1,70 +1,18 @@
 import sys
 
 from PyQt6.QtGui import QGuiApplication, QDoubleValidator, QIntValidator
-from PyQt6.QtWidgets import (QComboBox, QLineEdit, QPushButton, QMainWindow, QApplication, QVBoxLayout, QWidget)
+from PyQt6.QtWidgets import (QComboBox, QLineEdit, QPushButton, QMainWindow, QApplication, QVBoxLayout, QWidget, QGridLayout)
+from PyQt6.QtCore import Qt
+from PyQt6 import QtGui
 
 import numpy as np
+
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qtagg import FigureCanvas
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 
 from calculatePoints import generate_circle_coordinates_within, filter_coordinates_by_angle, reduce_coordinates_by_angle, filter_coordinates_by_min_distance, filter_coordinates_outside_range
-
-from PyQt6.QtCore import Qt
-
-
-
-def generate_test_plot():
-    # Example usage:
-    X = 1000
-    Y = 1000
-    r = 500
-    angle_min = 0    # Minimum angle in degrees
-    angle_max = 45   # Maximum angle in degrees
-
-    # Generate all coordinates within the circle
-    coordinates_within = generate_circle_coordinates_within(X, Y, r)
-
-    # Filter coordinates by the specified angular range
-    coordinates_within_angle = filter_coordinates_by_angle(coordinates_within, X, Y, angle_min, angle_max)
-
-    coordinates_within_angle3 = reduce_coordinates_by_angle(coordinates_within_angle, 1100, 1100, 400, 22.5, 67.5)
-    coordinates_within_angle3 = reduce_coordinates_by_angle(coordinates_within_angle3, 1300, 1200, 500, 112.5, 157.5)
-
-    # coordinates_within2 = generate_circle_coordinates_within(1300, 1200, 200)
-
-    # # Filter coordinates by the specified angular range
-    # coordinates_within_angle2 = filter_coordinates_by_angle(coordinates_within2, 1300, 1200, 112.5, 157.5)
-    # X = 1300
-    # Y = 1300
-    # r = 200
-    # coordinates_within2 = generate_circle_coordinates_within(X, Y, r)
-    # coordinates_within_angle2 = filter_coordinates_by_angle(coordinates_within2, X, Y, angle_min+22.5, angle_max+22.5)
-    # print(coordinates_within_angle.shape)
-
-    # nrows, ncols = coordinates_within_angle.shape
-    # dtype={'names':['f{}'.format(i) for i in range(ncols)],
-    #        'formats':ncols * [coordinates_within_angle.dtype]}
-    # coordinates_within_angle3 = np.intersect1d(coordinates_within_angle.view(dtype), coordinates_within_angle2.view(dtype))
-    # coordinates_within_angle3 = coordinates_within_angle3.view(coordinates_within_angle.dtype).reshape(-1, ncols)
-    # print(type(coordinates_within_angle3))
-
-    img = plt.imread("mapdump-flat.png")
-
-    # Plotting
-    plt.figure(figsize=(8, 8))
-    plt.imshow(img) 
-    # plt.scatter(coordinates_within[:, 0], coordinates_within[:, 1], color='lightgray', alpha=0, label='All Points within Circle' )
-    plt.scatter(coordinates_within_angle3[:, 0], coordinates_within_angle3[:, 1], color='#FF999C', alpha=0.1, label='Area to be checked')
-    # plt.scatter(coordinates_within_angle2[:, 0], coordinates_within_angle2[:, 1], color='b', alpha=0.1, label='Points within Angle Range')
-    # plt.scatter(coordinates_within_angle[:, 0], coordinates_within_angle[:, 1], color='g', alpha=0.1, label='Points within Angle Range')
-    plt.gca().set_aspect('equal', adjustable='box')
-    plt.title(f'Points within Circle and Angle Range ({angle_min}° to {angle_max}°)')
-    plt.xlabel('X')
-    plt.ylabel('Y')
-    # plt.legend()
-    plt.grid(True)
-    plt.savefig("output.png")
-    # plt.imshow(img)
-    plt.show()
 
 def calculate_coordinates(X, Y, r, angle_min, angle_max ):
     coordinates_within = generate_circle_coordinates_within(X, Y, r)
@@ -80,12 +28,12 @@ def get_distance_value(distance):
     return DistanceValues[distance]
 
 def get_direction_values(direction_index, looking_direction):
-    print("direction_index", direction_index)
+    # print("direction_index", direction_index)
     directionValues = [0, -45, -90, -135, 180, 135, 90, 45] # ["straight ahead", "ahead to the right", "right", "back to the right", "backwards", "back to the left", "to the left", "ahead to the left" ]
     directionValue = directionValues[direction_index]
     directionValue = ( 450 + ( looking_direction + directionValue )) % 360
     
-    print(directionValue)
+    # print(directionValue)
     DirectionMin = directionValue - 22.5
     DirectionMax = directionValue + 22.5
     if DirectionMin < 0:
@@ -94,35 +42,27 @@ def get_direction_values(direction_index, looking_direction):
         DirectionMax -= 360
     return DirectionMin, DirectionMax
 
-def plot_coordinates(coordinates_within_angle):
-    img = plt.imread("mapdump-flat.png")
-
-    # Plotting
-    plt.figure(figsize=(8, 8))
-    plt.imshow(img) 
-    plt.scatter(coordinates_within_angle[:, 0], coordinates_within_angle[:, 1], color='#FF999C', label='Area to be checked')
-    plt.gca().set_aspect('equal', adjustable='box')
-    plt.title(f'Points within Circle and Angle Range')
-    plt.xlabel('X')
-    plt.ylabel('Y')
-    plt.grid(True)
-    # plt.savefig("output.png")
-    plt.show()
-
-
 class MainWindow(QMainWindow):
 
     def __init__(self):
         super(MainWindow, self).__init__()
+        
         self.Coordinates = None
         self.PrevCoordinates = None
+        self.img = plt.imread("mapdump-flat.png")
 
         self.setWindowTitle("My App")
-        self.layout = QVBoxLayout()
+        self.layoutWidgets = QVBoxLayout()
+        self.layoutPlot = QVBoxLayout()
+        self.mainLayout = QGridLayout()
+        self.mainLayout.addLayout(self.layoutWidgets, 0, 0)
+        self.mainLayout.addLayout(self.layoutPlot, 0, 1)
+        self.mainLayout.setColumnStretch(1, 2)
+        self.mainLayout.setColumnMinimumWidth(0, int(QtGui.QGuiApplication.primaryScreen().availableSize().width()/8))
+        self.layoutWidgets.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.widget = QWidget()
 
         self.DirectionBox = QComboBox()  # ["straight ahead", "ahead to the left", "to the left", "back to the left", "backwards", "back to the right", "right", "ahead to the right"]
-        
         self.DirectionBox.addItems(["straight ahead", "ahead to the right", "right", "back to the right", "backwards", "back to the left", "to the left", "ahead to the left" ]) # ["straight ahead", "ahead to the right", "right", "back to the right", "backwards", "back to the left", "to the left", "ahead to the left"] 
 
         self.DistanceBox = QComboBox()
@@ -145,24 +85,30 @@ class MainWindow(QMainWindow):
         self.PlayerXCoord.setPlaceholderText("X Coordinate")
         self.PlayerYCoord.setPlaceholderText("Y Coordinate")
 
+        self.dynamic_canvas = FigureCanvas(Figure(figsize=(10, 10)))
+        self._dynamic_ax = self.dynamic_canvas.figure.subplots()
+        self.plot_coordinates(np.array([[0, 0]]) )
+        
+        self.layoutPlot.addWidget(self.dynamic_canvas)
+        self.layoutPlot.addWidget(NavigationToolbar(self.dynamic_canvas, self))
+
         self.ResetButton = QPushButton("Reset", clicked = self.reset)
-
         self.SumbitButton = QPushButton("Submit", clicked = self.calculate)
+        self.UndoButton = QPushButton("Undo", clicked = self.undo)
 
-        self.layout.addWidget(self.DirectionBox)
-        self.layout.addWidget(self.DistanceBox)
-        self.layout.addWidget(self.FacingDirection)
-        self.layout.addWidget(self.PlayerXCoord)
-        self.layout.addWidget(self.PlayerYCoord)
-        self.layout.addWidget(self.SumbitButton)
-        self.layout.addWidget(self.ResetButton)
+        self.layoutWidgets.addWidget(self.DirectionBox)
+        self.layoutWidgets.addWidget(self.DistanceBox)
+        self.layoutWidgets.addWidget(self.FacingDirection)
+        self.layoutWidgets.addWidget(self.PlayerXCoord)
+        self.layoutWidgets.addWidget(self.PlayerYCoord)
+        self.layoutWidgets.addWidget(self.SumbitButton)
+        self.layoutWidgets.addWidget(self.ResetButton)
+        self.layoutWidgets.addWidget(self.UndoButton)
 
-        self.widget.setLayout(self.layout)
+        self.widget.setLayout(self.mainLayout)
         self.setCentralWidget(self.widget)
 
-
     def calculate(self):
-        
         try:
             if(float(self.FacingDirection.text()) >= 360.0):
                 self.FacingDirection.setText("0")
@@ -190,25 +136,38 @@ class MainWindow(QMainWindow):
             coordinates_within_angle = calculate_coordinates(PlayerXCoord, PlayerYCoord, DistanceValueMax, DirectionMin, DirectionMax)
             self.Coordinates = filter_coordinates_by_min_distance(coordinates_within_angle, PlayerXCoord, PlayerYCoord, DistanceValueMin)
         self.Coordinates = filter_coordinates_outside_range(self.Coordinates)
-        plot_coordinates(self.Coordinates)
+
+        self.plot_coordinates(self.Coordinates)
     
     def reset(self):
+        self.PrevCoordinates = self.Coordinates
         self.Coordinates = None
-        self.PrevCoordinates = None
         self.FacingDirection.setText("")
         self.PlayerXCoord.setText("")
         self.PlayerYCoord.setText("")
-        
+        self.plot_coordinates(np.array([[0, 0]]) )
+    
+    def plot_coordinates(self, coordinates_within_angle):
+        self._dynamic_ax.clear()
+        self._dynamic_ax.imshow(self.img)
+        self._dynamic_ax.set_xlabel('X')
+        self._dynamic_ax.set_ylabel('Y')
+        self.dynamic_canvas.figure.set_layout_engine(layout="constrained")
+        self._dynamic_ax.imshow(self.img) 
+        self.scatterplot = self._dynamic_ax.scatter(coordinates_within_angle[:, 0], coordinates_within_angle[:, 1], color='#FF999C', label='Area to be checked')
+        self._dynamic_ax.set_aspect('equal', adjustable='box')
+        self.scatterplot.figure.canvas.draw()
+    
+    def undo(self):
+        if self.PrevCoordinates is not None:
+            self.Coordinates = self.PrevCoordinates
+            self.plot_coordinates(self.Coordinates)
+        else:
+            self.reset()
 
-  
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
+    window.resize(QtGui.QGuiApplication.primaryScreen().availableSize())
     window.show()
-    # generate_test_plot()
     sys.exit(app.exec())
-
-
-
-
-

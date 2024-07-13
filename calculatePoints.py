@@ -1,5 +1,4 @@
 import numpy as np
-from line_profiler import profile
 def generate_circle_coordinates_within(X, Y, r):
     """
     Generates coordinates for all points within a circle with center (X, Y) and radius r.
@@ -49,10 +48,10 @@ def filter_coordinates_by_angle(coordinates, X, Y, angle_min, angle_max):
     numpy.ndarray: Filtered array of coordinates within the specified angular range.
     """
     # Convert angles to radians
-    print("angle_min", angle_min, "angle_max", angle_max)
+    # print("angle_min", angle_min, "angle_max", angle_max)
     angle_min_rad = np.deg2rad(angle_min)
     angle_max_rad = np.deg2rad(angle_max)
-    print("angle_min_rad", angle_min_rad, "angle_max_rad", angle_max_rad)
+    # print("angle_min_rad", angle_min_rad, "angle_max_rad", angle_max_rad)
     
     # Calculate the angles of each point relative to the center
     angles = np.arctan2(Y - coordinates[:, 1], coordinates[:, 0] - X)
@@ -127,7 +126,6 @@ def filter_coordinates_by_min_distance(coordinates, X, Y, min_distance):
     
     return coordinates_min_distance
 
-@profile
 def filter_coordinates_outside_range(coordinates):
     """
     Filters coordinates that are outside the specified range.
